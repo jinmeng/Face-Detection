@@ -1,0 +1,49 @@
+//jin:  2016-02-23 09:36:39  copied from d:\svn\Algorithm\jinmeng\Code\NS_Face\ns_fd_cnn_proposal\src\ns_fd_cnn_proposal.cpp (work of Boss)
+int bilinear_image_resize(const unsigned char *src, int width,int height,
+								 unsigned char *dst, int nw, int nh)
+{
+	double dx, dy, x, y;
+	int x1, y1, x2, y2;	
+	int i, j;	
+	
+	unsigned char *pout = dst;
+	double f1, f2, f3, f4, f12, f34, val;
+	
+	
+	//输入图像的采样间隔
+	dx = (double) (width) / (double) (nw);
+	dy = (double) (height) / (double) (nh);
+	
+	for (j=0; j<nh; ++j) 
+	{
+		y = j * dy;
+		y1 = (int) y;
+		y2 = y1 + 1;
+		y2 = y2>height-1? height-1 : y2;
+		for (i=0; i<nw; ++i) 
+		{
+			x = i * dx;
+			x1 = (int) x;
+			x2 = x1 + 1;
+			x2 = x2>width-1? width-1 : x2;
+			
+			f1 = *(src + width * y1 + x1);
+			f3 = *(src + width * y1 + x2);
+			f2 = *(src + width * y2 + x1);
+			f4 = *(src + width * y2 + x2);
+			
+			f12 = (f1  + (y-y1) * (f2 - f1));
+			f34 = (f3  + (y-y1) * (f4 - f3));
+			
+			//+0.5是为了四舍五入，加0.00001是为了尽量避开取整时的大误差情况
+			val = f12 + (x - x1) * (f34 - f12) + 0.5;
+			if(val > 255)
+				*pout = 255;
+			else
+				*pout = (unsigned char) val;
+			++pout;
+		}
+	}
+	
+	return 0;
+}
