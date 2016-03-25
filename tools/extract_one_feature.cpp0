@@ -116,7 +116,6 @@ int feature_extraction_pipeline(int argc, char** argv) {
         << " in the network " << feature_extraction_proto;  
   }  
   
-  
   vector<shared_ptr<writeDb<Dtype> > > feature_dbs;  
   for (size_t i = 0; i < num_features; ++i) //打开db，准备写入数据  
   {  
@@ -126,21 +125,22 @@ int feature_extraction_pipeline(int argc, char** argv) {
     feature_dbs.push_back(shared_ptr<writeDb<Dtype> >(db));  
   }  
   
-  
-  
   LOG(ERROR)<< "Extacting Features";  
   
   const shared_ptr<Layer<Dtype> > layer = feature_extraction_net->layer_by_name("data");//获取第一层  
-  MyImageDataLayer<Dtype>* my_layer = (MyImageDataLayer<Dtype>*)layer.get();  
-  my_layer->setImgPath(argv[++arg_pos],1);//"/media/G/imageset/clothing/针织衫/针织衫_1.jpg"  
+  printf("layer: %x\n", layer.get());
+  MyImageDataLayer<Dtype>* my_layer = (MyImageDataLayer<Dtype>*)layer.get(); 
+  printf("my_layer: %x\n", my_layer);
+  my_layer->setImgPath(argv[++arg_pos], 1);//"/media/G/imageset/clothing/针织衫/针织衫_1.jpg"  
   //设置图片路径  
+  
   
   vector<Blob<float>*> input_vec;  
   vector<int> image_indices(num_features, 0);  
   int num_mini_batches = 1;//atoi(argv[++arg_pos]);//共多少次迭代。  每次迭代的数量在prototxt用batchsize指定  
   for (int batch_index = 0; batch_index < num_mini_batches; ++batch_index) //共num_mini_batches次迭代  
   {  
-    feature_extraction_net->Forward(input_vec);//一次正向传播  
+    feature_extraction_net->Forward(input_vec);//一次正向传播   //jin  NOT understand input_vec 20160321 17:37 useless 20160322 18:32
     for (int i = 0; i < num_features; ++i) //多层特征  
     {  
       const shared_ptr<Blob<Dtype> > feature_blob = feature_extraction_net  

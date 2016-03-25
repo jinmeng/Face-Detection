@@ -199,7 +199,7 @@ int main(int argc, char** argv)
     CHECK_EQ(mdb_open(mdb_txn3, NULL, 0, &mdb_dbi3), MDB_SUCCESS)  << "mdb_open failed. Does the lmdb already exist? ";
     LOG(INFO) << "Opening target lmdb in " << tar_db;
     
-//2.4  write key/value pairs read from lmdb1 and lmdb2 into lmdb3, since #lmdb1 = 1500000 and #lmdb2 = 50000, we read 3 times from lmdb1 and 1 time from lmdb2     
+//2.4  write into lmdb3 key/value pairs read from lmdb1 and lmdb2      
     size_t count = 0;
     const int kMaxKeyLength = 256;
 	string keystr3;
@@ -213,10 +213,7 @@ int main(int argc, char** argv)
         string keystr1 = db_keylist1[i];
 	    mdb_key1.mv_size = keystr1.size();
 	    mdb_key1.mv_data = reinterpret_cast<void*>(&keystr1[0]);      
-		
-        //jin test
-		//        cout << "keystr1 = " << keystr1 << endl;         
-
+		        
         //check if mdb_key1 is a positive
         if(mdb_cursor_get(mdb_cursor1, &mdb_key1, &mdb_value1, MDB_SET_KEY) == MDB_SUCCESS)  //yes, mdb_key1 is a positive
         {

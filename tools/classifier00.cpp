@@ -20,6 +20,32 @@ using std::string;
 using std::cout;
 using std::endl;
 
+//jin: 20160324 09:14 copied from extract_one_feature.cpp
+template<typename Dtype>  
+class writeDb  
+{  
+public:  
+    void open(string dbName)  
+    {  
+        db.open(dbName.c_str());  
+    }  
+    void write(const Dtype &data)  
+    {  
+        db<<data;  
+    }  
+    void write(const string &str)  
+    {  
+        db<<str;  
+    }  
+    virtual ~writeDb()  
+    {  
+        db.close();  
+    }  
+private:  
+    std::ofstream db;  
+}; 
+//end jin: 20160324 09:14
+
 
 /* Pair (label, confidence) representing a prediction. */
 //typedef std::pair<string, float> Prediction;
@@ -28,7 +54,8 @@ typedef std::pair<int, float> Prediction;
 class Classifier {
  public:
   Classifier(const string& model_file,
-             const string& trained_file);   // ,const string& mean_file,     const string& label_file);
+             const string& trained_file);
+            // ,const string& mean_file,     const string& label_file);
 
   std::vector<Prediction> Classify(const cv::Mat& img, int N = 1);//N = 5
 
@@ -136,7 +163,36 @@ std::vector<Prediction> Classifier::Classify(const cv::Mat& img, int N) {
   return predictions;
 }
 
+/* Load the mean file in binaryproto format. */
+//void Classifier::SetMean(const string& mean_file) {
+//  BlobProto blob_proto;
+//  ReadProtoFromBinaryFileOrDie(mean_file.c_str(), &blob_proto);
 
+//  /* Convert from BlobProto to Blob<float> */
+//  Blob<float> mean_blob;
+//  mean_blob.FromProto(blob_proto);
+//  CHECK_EQ(mean_blob.channels(), num_channels_)
+//    << "Number of channels of mean file doesn't match input layer.";
+
+//  /* The format of the mean file is planar 32-bit float BGR or grayscale. */
+//  std::vector<cv::Mat> channels;
+//  float* data = mean_blob.mutable_cpu_data();
+//  for (int i = 0; i < num_channels_; ++i) {
+//    /* Extract an individual channel. */
+//    cv::Mat channel(mean_blob.height(), mean_blob.width(), CV_32FC1, data);
+//    channels.push_back(channel);
+//    data += mean_blob.height() * mean_blob.width();
+//  }
+
+//  /* Merge the separate channels into a single image. */
+//  cv::Mat mean;
+//  cv::merge(channels, mean);
+
+//  /* Compute the global mean pixel value and create a mean image
+//   * filled with this value. */
+//  cv::Scalar channel_mean = cv::mean(mean);
+//  mean_ = cv::Mat(input_geometry_, mean.type(), channel_mean);
+//}
 
 std::vector<float> Classifier::Predict(const cv::Mat& img) {
   Blob<float>* input_layer = net_->input_blobs()[0];
@@ -274,36 +330,3 @@ int main(int argc, char** argv) {
   LOG(FATAL) << "This example requires OpenCV; compile with USE_OPENCV.";
 }
 #endif  // USE_OPENCV
-
-
-
-/* Load the mean file in binaryproto format. */
-//void Classifier::SetMean(const string& mean_file) {
-//  BlobProto blob_proto;
-//  ReadProtoFromBinaryFileOrDie(mean_file.c_str(), &blob_proto);
-
-//  /* Convert from BlobProto to Blob<float> */
-//  Blob<float> mean_blob;
-//  mean_blob.FromProto(blob_proto);
-//  CHECK_EQ(mean_blob.channels(), num_channels_)
-//    << "Number of channels of mean file doesn't match input layer.";
-
-//  /* The format of the mean file is planar 32-bit float BGR or grayscale. */
-//  std::vector<cv::Mat> channels;
-//  float* data = mean_blob.mutable_cpu_data();
-//  for (int i = 0; i < num_channels_; ++i) {
-//    /* Extract an individual channel. */
-//    cv::Mat channel(mean_blob.height(), mean_blob.width(), CV_32FC1, data);
-//    channels.push_back(channel);
-//    data += mean_blob.height() * mean_blob.width();
-//  }
-
-//  /* Merge the separate channels into a single image. */
-//  cv::Mat mean;
-//  cv::merge(channels, mean);
-
-//  /* Compute the global mean pixel value and create a mean image
-//   * filled with this value. */
-//  cv::Scalar channel_mean = cv::mean(mean);
-//  mean_ = cv::Mat(input_geometry_, mean.type(), channel_mean);
-//}

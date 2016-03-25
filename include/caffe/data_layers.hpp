@@ -243,6 +243,46 @@ class HDF5OutputLayer : public Layer<Dtype> {
   Blob<Dtype> label_blob_;
 };
 
+//added by jin at 20160322 19:03
+template <typename Dtype>
+class MyImageDataLayer : public Layer<Dtype>  {
+public:
+	explicit MyImageDataLayer(const LayerParameter& param)
+		: Layer<Dtype>(param) {}
+	virtual ~MyImageDataLayer();
+	virtual void SetUp(const vector<Blob<Dtype>*>& bottom,
+					   vector<Blob<Dtype>*>* top);
+
+	virtual inline LayerParameter_LayerType type() const {
+		return LayerParameter_LayerType_MY_IMAGE_DATA;
+	}
+	virtual inline int ExactNumBottomBlobs() const { return 0; }
+	virtual inline int ExactNumTopBlobs() const { return 2; }
+	void fetchData();
+	void setImgPath(string path,int label);
+protected:
+	//jin
+	//virtual Dtype Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+	//						  vector<Blob<Dtype>*>* top);
+	virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+							  vector<Blob<Dtype>*>* top);
+
+	virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+							  const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {}
+
+
+	vector<std::pair<std::string, int> > lines_;
+	int lines_id_;
+	int datum_channels_;
+	int datum_height_;
+	int datum_width_;
+	int datum_size_;
+	Blob<Dtype> prefetch_data_;
+	Blob<Dtype> prefetch_label_;
+	Blob<Dtype> data_mean_;
+	Caffe::Phase phase_;
+};
+
 /**
  * @brief Provides data to the Net from image files.
  *
