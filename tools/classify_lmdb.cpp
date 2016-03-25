@@ -375,7 +375,7 @@ int main(int argc, char** argv)
 		
 		if((i+1)%1000 == 0){
 			//LOG(ERROR) << "Processed " << i+1 << " files.";
-			printf("%10d", i+1);
+			printf("%8d", i+1);
 		}
 	}
         
