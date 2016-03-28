@@ -175,10 +175,6 @@ private:
 	//divide each unsigned char by 256 and assign to input_layer
     void preprocess(const Datum& datum);
 	
-//    std::vector<float> Predict(const cv::Mat& img);
-//    void WrapInputLayer(std::vector<cv::Mat>* input_channels);
-//    void Preprocess(const cv::Mat& img, std::vector<cv::Mat>* input_channels);
-
 private:
     shared_ptr<Net<float> > net_;
 //    cv::Size input_geometry_;
@@ -189,12 +185,6 @@ private:
 
 Classifier::Classifier(const string& model_file, const string& trained_file) 
 {
-//#ifdef CPU_ONLY
-//    Caffe::set_mode(Caffe::CPU);
-//#else
-//    Caffe::set_mode(Caffe::GPU);
-//#endif
-
     /* Load the network. */
     //jin 2016-03-21 18:12:27 
     //net_.reset(new Net<float>(model_file, TEST));
@@ -343,16 +333,16 @@ int main(int argc, char** argv)
 	
     if(load_strlist(db_keylist1, src_db_keylist1)) { return -1; }
 	//jin test
-	printf("db_keylist1.size() = %d\n", db_keylist1.size());
+	int db_size = db_keylist1.size();
+	printf("db_keylist1.size() = %d\n", db_size);
 	
 	// 2. open lmdb1 for reading image data by keys 
-	for( int i = 0; i < db_keylist1.size(); ++i )  
+	for( int i = 0; i < db_size; ++i )  
     {  
         string keystr1 = db_keylist1[i];
 		lmdb.set_key(keystr1);
 		//test: print value of key
-		
-		
+			
 		Datum datum;
 		lmdb.datum(&datum);
 		          
