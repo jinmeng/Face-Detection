@@ -1,0 +1,93 @@
+// jin 20160401 based on check_classify_lmdb_pos.m
+// convert N*N faces into a large image, Need TWO versions: 12*12 and 48*48 
+
+
+////img list
+root_path ='z:\User\team02\Face_DB\fd_sample_1.0.0.1';
+
+// imglist_file='z:\User\team02\Face_DB\fd_sample_1.0.0.1\megaface\res1.txt';
+// res_path = fullfile(root_path, 'megaface\res1');
+ imglist_file='z:\User\team02\Face_DB\fd_sample_1.0.0.1\megaface\res2.txt';
+ res_path = fullfile(root_path, 'megaface\res2');
+// imglist_file='z:\User\team02\Face_DB\fd_sample_1.0.0.1\megaface\res3.txt';
+// res_path = fullfile(root_path, 'megaface\res3');
+//imglist_file='z:\User\team02\Face_DB\fd_sample_1.0.0.1\megaface\res4_3200.txt';
+//res_path = fullfile(root_path, 'megaface\res4');
+
+mkdir(res_path);
+
+[img_list, prob] = load_res(imglist_file);
+
+////plot 20*20 image each time
+ss = 20;
+stepsize = ss*ss;
+wd = 1/ss;
+len=numel( img_list); 
+
+for i = 1 : stepsize : len 
+	//print_ind(i, len);
+	//subplot100(img_list, i);
+
+	//A stores images of maximal size 48 with spacing 8
+	sz1 = 56;
+	A = zeros(sz1*ss, sz1*ss);
+
+	//B stores resized images of size 12*12 with spacing 8
+	sz2 = 20; 
+	B = zeros(sz2*ss, sz2*ss);
+
+	//highlight per 5 rows or columns
+	for k = 1:3
+		r1 = k*sz1*5;
+		A(r1-2 : r1-1, :)  =  255;
+		A(:, r1-2 : r1-1)  =  255;
+		r2 = k*sz2*5;
+		B(:, r2-2 : r2-1)  =  255;
+		B(r2-2 : r2-1, :)  =  255;
+	end
+//	h1=figure(1); //	h2=figure(2);
+	
+	for j = i : i+stepsize - 1
+		print_ind(j, len);
+		if j>len
+			break;
+		end
+		img_str{j} = strrep(img_list{j}, '/', '\');
+		img_name = img_str{j}(10:end);
+		img_path{j} = fullfile(root_path, img_name);
+		
+		k = j-i+1;
+		img{k} = imread(img_path{j});
+		
+		img_resized{k} = imresize(img{k}, [12 12]);
+	
+		wd = size(img{k}, 2);
+		ht = size(img{k}, 1);
+		row = floor((j-i) / ss);
+		col = mod(j-i, ss);
+
+		A(row*sz1+5 : row*sz1+ ht+4, col*sz1+5 : col*sz1+wd+4) =  img{k};	
+
+		B(row*sz2+5 : row*sz2 + 16, col*sz2+5: col*sz2+16) = img_resized{k};	
+		
+// 		if is_show == 1
+// 			figure(1); imshow(uint8(A));
+// 		end
+	end
+	
+	A = uint8(A);
+	B = uint8(B);
+	
+	if is_show == 1
+		figure(1); imshow(A);
+		figure(2); imshow(B);
+	end
+	
+    imwrite(A, fullfile(res_path,  ['im_', num2str(i),  '.bmp']));	
+	imwrite(B, fullfile(res_path,  ['imresized_', num2str(i),  '.bmp']));
+end
+
+
+
+
+

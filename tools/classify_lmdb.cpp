@@ -35,8 +35,9 @@ class WriteDb
 {  
 public:  
     void open(string dbName) { db_.open(dbName.c_str()); }  
+	
 	void write(const int sz) {db_ << sz << endl;}
- 
+	
 	void write(const pair<string, float> &p) { db_ << p.first << "  " << p.second << endl;}
 	void write(const vector<pair<string, float> > &vp) 
 	{
@@ -48,8 +49,16 @@ public:
 		}
 	}
 	
-//	void write(const float &data) { db<<data; }    
-//	void write(const string &str) { db<<str;  } 
+	void write(const vector<string> &sv) {
+		int sz = sv.size();
+		write(sz);
+		for(int i = 0; i < sz; ++i)
+		{
+			db_ << sv[i] << endl;  
+		}
+	} 
+	
+//	void write(const float &data) { db_<<data; }    
 	
 	virtual ~WriteDb() {  db_.close(); }  
 	
@@ -164,16 +173,17 @@ public:
     Classifier(const string& model_file,
              const string& trained_file);          
 
-    std::vector<float> predict(const Datum& datum);
+    std::vector<float> predict(const Datum& datum, char *msg);
    
 	//jin: read data from lmdb and its keylist
-    std::vector<Prediction> classify(const Datum& datum); 
+    std::vector<Prediction> classify(const Datum& datum, char *msg); 
 	//std::vector<Prediction> Classify(const cv::Mat& img, int N = 1);//N = 5
 
 private:
 	
 	//divide each unsigned char by 256 and assign to input_layer
-    void preprocess(const Datum& datum);
+	//jin 20160329 14:59 change void into int 
+    int preprocess(const Datum& datum, char *msg);
 	
 private:
     shared_ptr<Net<float> > net_;
@@ -215,6 +225,11 @@ static bool PairCompare(const std::pair<float, int>& lhs,
     return lhs.first > rhs.first;
 }
 
+static bool PairCompare2(const std::pair<string, float>& lhs,
+                        const std::pair<string, float>& rhs) {
+    return lhs.second > rhs.second;
+}
+
 /* Return the indices of the top N values of vector v. */
 static std::vector<int> Argmax(const std::vector<float>& v, int N) {
     std::vector<std::pair<float, int> > pairs;
@@ -234,9 +249,9 @@ static std::vector<int> Argmax(const std::vector<float>& v, int N) {
 }
 
 /* Return the top 1 predictions. */
-std::vector<Prediction> Classifier::classify(const Datum &datum) 
+std::vector<Prediction> Classifier::classify(const Datum &datum, char *msg) 
 {
-    std::vector<float> output = predict(datum);
+    std::vector<float> output = predict(datum, msg);
 
     //N = std::min<int>(labels_.size(), N);
 	int N = 1;
@@ -250,9 +265,14 @@ std::vector<Prediction> Classifier::classify(const Datum &datum)
     return predictions;
 }
 
-std::vector<float> Classifier::predict(const Datum &datum) 
+std::vector<float> Classifier::predict(const Datum &datum, char *msg=NULL) 
 {
-	preprocess(datum);
+	int ret = preprocess(datum, msg);
+	
+	if(ret != 0) {
+		std::vector<float> v(2, 0);
+		return v;
+	}
 	
     net_->ForwardPrefilled();
 
@@ -266,7 +286,7 @@ std::vector<float> Classifier::predict(const Datum &datum)
     return std::vector<float>(begin, end);
 }
 
-void Classifier::preprocess(const Datum& datum)
+int Classifier::preprocess(const Datum& datum, char *msg)
 {
 	Blob<float>* input_layer = net_->input_blobs()[0];
     input_layer->Reshape(1, num_channels_,  height_, width_);
@@ -276,13 +296,20 @@ void Classifier::preprocess(const Datum& datum)
 	float* input_data = input_layer->mutable_cpu_data();
 	const string& data = datum.data();
 	
-	CHECK_EQ(data.size(), height_ * width_) << "data.size() and input_layer_size not match!";
+	//CHECK_EQ(data.size(), height_ * width_) << "data.size() and input_layer_size not match!";
+	int data_size = data.size(), input_layer_size = height_ * width_;
+	if( data_size!= input_layer_size)
+	{
+		sprintf(msg, "\ndata.size() = %d and input_layer_size = %d not match!", data_size, input_layer_size);
+		return -1;
+	}
 	for(int i=0; i < data.size(); ++i)
 	{
 		char tmp = ((i+1)%datum.height() == 0) ? '\n':'\t';
 		input_data[i] = (uint8_t)data[i] * 1.0 / 256;
 		//printf("%d %6.2f%c", (uint8_t)data[i], input_data[i], tmp);
 	}	
+	return 0;
 }
 
 int main(int argc, char** argv) 
@@ -325,7 +352,8 @@ int main(int argc, char** argv)
 	lmdb.open(src_db_path1);
 	
 	 //used to store images with classification probability in [0, 0.5], (0.5, 0.7], (0.7, 0.9], (0.9, 1]
-	vector<std::pair<string, float> > sv1, sv2, sv3, sv4; 
+	vector<std::pair<string, float> > sv1, sv2, sv3, sv4;
+	vector<string> sv0; //sv0 is used to save images with errors 
 	
     // 1. read keystr from SRC_DB1_LIST into vector db_keystrlist1;
     const char *src_db_keylist1 = argv[++arg_pos]; //argv[4];
@@ -335,6 +363,8 @@ int main(int argc, char** argv)
 	//jin test
 	int db_size = db_keylist1.size();
 	printf("db_keylist1.size() = %d\n", db_size);
+	
+	char msg[128];
 	
 	// 2. open lmdb1 for reading image data by keys 
 	for( int i = 0; i < db_size; ++i )  
@@ -346,11 +376,15 @@ int main(int argc, char** argv)
 		Datum datum;
 		lmdb.datum(&datum);
 		          
-		std::vector<float> output = classifier.predict(datum); 
+		std::vector<float> output = classifier.predict(datum, msg); 
 		
 		//jin: only output the probability of each image as a face
 		float sc = output[1]; 
-		if(sc<=0.5){
+		if(sc == 0 && output[0] ==0){
+			printf("%s for %s\n", msg, keystr1.c_str());
+			sv0.push_back(keystr1);
+		}
+		else if(sc<=0.5){
 			sv1.push_back(make_pair(keystr1, sc));
 		}else if(sc<=0.7){
 			sv2.push_back(make_pair(keystr1, sc));
@@ -370,9 +404,14 @@ int main(int argc, char** argv)
 	}
         
 	// 3. save sv1,...sv4 into files
-	printf("\nwrite all classification results into files");
+	printf("\nwrite all classification results into files\n");
 	string outpath(argv[++arg_pos]); //argv[5];
-	WriteDb db1, db2, db3, db4;
+	WriteDb db1, db2, db3, db4, db0;
+	
+	sort(sv1.begin(), sv1.end(), PairCompare2);
+	sort(sv2.begin(), sv2.end(), PairCompare2);
+	sort(sv3.begin(), sv3.end(), PairCompare2);
+	sort(sv4.begin(), sv4.end(), PairCompare2);
 	
 	db1.open(outpath+"/res1.txt");
 	db1.write(sv1);
@@ -382,6 +421,9 @@ int main(int argc, char** argv)
 	db3.write(sv3);
 	db4.open(outpath+"/res4.txt");
 	db4.write(sv4);
+	
+	db0.open(outpath+"/error.txt");
+	db0.write(sv0);
 }
 
 

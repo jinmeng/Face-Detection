@@ -67,8 +67,8 @@ bool comp_rect(const CNN_RECT &rect1, const CNN_RECT &rect2)
 }
 
 //============================== utility functions ==============================
-int bilinear_image_resize(const unsigned char *src, int width,int height,
-								 unsigned char *dst, int nw, int nh)
+int bilinear_image_resize(const unsigned char *src, int width, int height,
+								unsigned char *dst, int nw, int nh)
 {
 	double dx, dy, x, y;
 	int x1, y1, x2, y2;	
@@ -203,7 +203,7 @@ void get_img_rect(unsigned char *image, int width,  int height,
 				img_rect[iy*wd + ix] = 0;
 			}
 			else{
-				img_rect[iy*wd + ix] = image[(y+iy)*width + ix +x];
+				img_rect[iy*wd + ix] = image[(y+iy)*width + ix + x];
 			}
 		}
 	}
@@ -225,7 +225,8 @@ bool ReadImageRectToDatumArr(const string& img_filename, const int resize_height
     int cv_read_flag = CV_LOAD_IMAGE_GRAYSCALE;   //int cv_read_flag = (is_color ? CV_LOAD_IMAGE_COLOR : CV_LOAD_IMAGE_GRAYSCALE);
 
     cv::Mat cv_img_origin = cv::imread(img_filename, cv_read_flag);
-    if (!cv_img_origin.data) {
+    if (!cv_img_origin.data) 
+	{
         LOG(ERROR) << "Could not open or find file " << img_filename;
         return false;
     }
@@ -250,7 +251,8 @@ bool ReadImageRectToDatumArr(const string& img_filename, const int resize_height
     }
     
     unsigned char* img_resize = (unsigned char*) malloc(resize_height*resize_width*sizeof(unsigned char));
-    if(NULL == img_rect){
+    if(NULL == img_rect)
+	{
         printf("Failed to malloc.\n");
         return false;
     }
@@ -281,8 +283,10 @@ bool ReadImageRectToDatumArr(const string& img_filename, const int resize_height
         datum.clear_float_data();
         string* datum_string = datum.mutable_data();
     
-        for (int h = 0; h < resize_height; ++h) {
-            for (int w = 0; w < resize_width; ++w) {
+        for (int h = 0; h < resize_height; ++h) 
+		{
+            for (int w = 0; w < resize_width; ++w) 
+			{
                 datum_string->push_back(img_resize[h*resize_width+w]);
             }
         }

@@ -97,14 +97,14 @@ int main(int argc, char** argv)
 
     gflags::SetUsageMessage("Combine two lmdbs into one.\n"
         "Usage:\n"
-        "    combine_lmdb2 [FLAGS] SRC_DB1 SRC_DB1_KEYLIST SRC_DB2 SRC_DB2_KEYLIST TAR_DB TAR_DB_KEYLIST\n"
+        "    combine_lmdb2 [FLAGS] SRC_DB1 SRC_DB1_KEYLIST SRC_DB2 SRC_DB2_KEYLIST TAR_DB TAR_DB_KEYLIST ERR_KEYLIST\n"
         "");
     
     //jin
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     FLAGS_log_dir="./log";
 
-    if (argc != 7) {
+    if (argc != 8) {  //argc != 7 &&  //jin add err_keylist now
         gflags::ShowUsageWithFlagsRestrict(argv[0], "tools/combine_lmdb ");
         return 1;
     }
@@ -200,11 +200,12 @@ int main(int argc, char** argv)
     LOG(INFO) << "Opening target lmdb in " << tar_db;
     
 //2.4  write into lmdb3 key/value pairs read from lmdb1 and lmdb2      
-    size_t count = 0;
+    int count = 0;
     const int kMaxKeyLength = 256;
 	string keystr3;
 	
     vector<string> db_keylist3;//to save keylists for the combined lmdb
+    vector<string> errkeylist;
     
     for( size_t i = 0; i < db_keylist1.size(); ++i ) //jin: now the sizes of both lmdb1 and lmdb2 are 1000000  
     {
@@ -217,7 +218,14 @@ int main(int argc, char** argv)
         //check if mdb_key1 is a positive
         if(mdb_cursor_get(mdb_cursor1, &mdb_key1, &mdb_value1, MDB_SET_KEY) == MDB_SUCCESS)  //yes, mdb_key1 is a positive
         {
-            //convert keys in lmdb1 into keys in lmdb3 and put  into lmdb3     
+			//check if mdb_value1 is of size 0  //20160407
+			if (0==mdb_value1.mv_size){
+				//printf("value for %s is invalid!\n", keystr1.c_str());
+				errkeylist.push_back(keystr1);
+				
+				continue;
+			}	
+            //convert keys in lmdb1 into keys in lmdb3 and put into lmdb3     
 	        char key_cstr[kMaxKeyLength]; 
             snprintf(key_cstr, kMaxKeyLength, "%08d_%s", count, keystr1.c_str());          
             keystr3 = key_cstr;
@@ -232,6 +240,14 @@ int main(int argc, char** argv)
         } 
         else  if (mdb_cursor_get(mdb_cursor2, &mdb_key1, &mdb_value2, MDB_SET_KEY) == MDB_SUCCESS) //no, mdb_key1 is a negative
         {
+			//check if mdb_value1 is of size 0  //20160407
+			if (0==mdb_value2.mv_size){
+				//printf("value for %s is invalid!\n", keystr1.c_str());
+				errkeylist.push_back(keystr1);
+				
+				continue;
+			}	
+			
             //convert keys in lmdb2 into keys in lmdb3 and put  into lmdb3    
 			char key_cstr[kMaxKeyLength];  
 			snprintf(key_cstr, kMaxKeyLength, "%08d_%s", count, keystr1.c_str());		
@@ -278,7 +294,7 @@ int main(int argc, char** argv)
     }           
 
 
-// 3. save keystrins of lmdb3 into a file of list   
+// 3. save keystrings of lmdb3 into a file of list   
     std::ofstream outfile(argv[6]);
     if(!outfile)
     {
@@ -293,6 +309,20 @@ int main(int argc, char** argv)
         outfile << db_keylist3[i] << endl;
     } 
     
+//4. save errkeylist    
+    std::ofstream errfile(argv[7]);
+    if(!errfile)
+    {
+        cerr << "Failed to open file " << argv[7] << endl;
+        return -1;
+    }
+    
+    int sv=errkeylist.size();
+    printf("There are %d invalid keys\n", sv);
+    for(size_t i = 0; i < sv; ++i)
+    {
+        errfile << errkeylist[i] << endl;
+    } 
                 
   return 0;
 }
